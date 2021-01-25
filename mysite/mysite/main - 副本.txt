@@ -1,0 +1,129 @@
+from py2neo import Graph, Node, Relationship, NodeMatcher, Subgraph
+import json
+import pandas
+graph = Graph('http://localhost:7474', username='neo4j', password='cyh991227')
+matcher = NodeMatcher(graph)
+
+#建立节点
+with open("163music_data_processed.json", "r", encoding="utf-16") as f:
+    for data in f.readlines():
+        dict = json.loads(data)
+        if count%100 == 0:
+            print(count)
+        count = count+1
+
+        node_music = Node('music',id = dict['_id'], name = dict['name'])
+        graph.create(node_music)
+
+
+        for artid, artname in zip(dict['artist_ids'],dict['artist_names']):
+            if not(matcher.match('artist', id=artid).first()):
+                node_artist = Node('artist', id = artid , name = artname)
+                graph.create(node_artist)
+
+
+        if not(matcher.match('album', id=dict['album_id']).first()):
+            node_album = Node('album', id=dict['album_id'], name=dict['album_name'])
+            graph.create(node_album)
+
+        for playid, playname in zip(dict['playlist_ids'],dict['playlist_names']):
+            if not(matcher.match('playlist', id=playid).first()):
+                node_playlist = Node('playlist', id = playid , name = playname)
+                graph.create(node_playlist)
+
+
+#创建关系
+with open("163music_data_processed.json", "r", encoding="utf-16") as f:
+    for data in f.readlines():
+        if count % 100 == 0:
+            print(count)
+        count = count + 1
+        dict = json.loads(data)
+        node_music = matcher.match('music', id=dict['_id']).first()
+        node_artist_list=[]
+
+        for artid, artname in zip(dict['artist_ids'],dict['artist_names']):
+            node_artist = matcher.match('artist', id=artid).first()
+            relationship_sing = Relationship(node_artist, '演唱', node_music)
+            node_artist_list.append(node_artist)
+            graph.create(relationship_sing)
+
+        length=len(node_artist_list)
+        for j in range(length):
+            if j != 0:
+                relationship_coo = Relationship(node_artist_list[0], '合作', node_artist_list[j])
+                relationship_coo['歌曲'] = dict['_id']
+                graph.create(relationship_coo)
+
+        node_album = matcher.match('album', id=dict['album_id']).first()
+        relationship_album = Relationship(node_music, '属于专辑', node_album)
+        graph.create(relationship_album)
+
+        for playid in dict['playlist_ids']:
+            node_playlist = matcher.match('playlist', id=playid).first()
+            relationship_playlist = Relationship(node_music, '属于歌单', node_playlist)
+            graph.create(relationship_playlist)
+
+        for smid in dict['similar_musics_ids']:
+            node_smm = matcher.match('music', id=smid).first()
+            if node_smm:
+                relationship_smm = Relationship(node_music, '相似', node_smm)
+            graph.create(relationship_smm)
+
+
+#添加歌单属性
+import csv
+with open('playlist_data.csv','r',encoding='gbk') as csvfile:
+    reader = csv.reader(csvfile)
+    rows = [row for row in reader]
+for row1 in rows:
+    playlistid = row1[0]
+    node = matcher.match('playlist', id = playlistid).first()
+    if row1[1] == '':
+        continue
+    feature = row1[1].split(',')
+    if node:
+        for f in feature:
+            #print(type(f))
+            node[f] = '1'
+            graph.push(node)
+    print(count)
+    count=count+1
+
+#添加歌手简介
+# import csv
+# with open('artist_data.csv','r',encoding='gbk') as csvfile:
+#     reader = csv.reader(csvfile)
+#     rows = [row for row in reader]
+# for row1 in rows:
+#     artistid = row1[0]
+#     node = matcher.match('artist', id=artistid).first()
+#     if node:
+#         node['introduction'] = row1[1]
+#         graph.push(node)
+
+# inputstr='华语'
+# nodes = matcher.match('playlist',='1')
+# #nodes = list(nodes)
+# print(nodes)
+# for node in nodes:
+#     print(node)
+
+
+# match_str = "MATCH (n:playlist{华语 : '1'}) RETURN n"
+# p1 = graph.run(match_str).data()
+# p1 = list(p1)
+# for p in p1:
+#     print(p['n']['name'])
+
+#添加歌词
+# import csv
+# with open('play_data.csv','r',encoding='utf-8') as csvfile:
+#     reader = csv.reader(csvfile)
+#     rows = [row for row in reader]
+# for row1 in rows:
+#     musicid = row1[0]
+#     node = matcher.match('music', id=musicid).first()
+#     if node:
+#         node['lyric'] = row1[1]
+#         graph.push(node)

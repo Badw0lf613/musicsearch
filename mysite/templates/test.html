@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title> 华语乐坛知识问答系统 </title>
+    {% load staticfiles %}
+    <link rel="stylesheet" href="{% static '/stylesheets/style.css' %}" type="text/css" />
+    <script src="{% static '/javascript/jquery-3.4.1.min.js' %}"></script>
+    <script src="{% static '/javascript/echarts.js' %}"></script>
+    <script src="{% static '/javascript/test.js' %}"></script>
+    <script src="{% static '/javascript/jquery.min.js' %}"></script>
+</head>
+<body>
+    <div id="window">
+        <div class="chat_box">
+            <div class="title">
+                <div class="title_txt"> 华语乐坛知识问答系统 </div>
+                <div class="title_txt" style="font-size: 11px;margin-top: 50px;margin-left: 180px">version=1.0.0</div>
+            </div>
+            <div class="chat_area" id="text_collection">
+                <chat_text_left> 欢迎使用华语乐坛知识问答系统 </chat_text_left></br>
+                <chat_text_left> 请问有什么需要帮助的吗 </chat_text_left></br>
+            </div>
+            <div id="scrollBar"></div>
+                <form class= "search" align = "center" name="input" action="" method="post">
+                  <div id="myInput">
+                    {% csrf_token %}
+                    <input id="txt"  placeholder="请输入..." type="text" name="shuru">
+                  </div>
+                  <select id="select", name="select">
+                    <option value="singer">歌手</option>
+                    <option value="song">歌曲</option>
+                    <option value="album">专辑</option>
+                    <option value="list">歌单</option>
+                  </select>
+                  <div class = "button">
+                    <button id="btn" type="submit" value="提交">
+                      查询
+                    </button>
+                  </div>
+                </form>
+        </div>
+        <div id="myDraw"/>
+    </div>
+    <script type="text/javascript">
+        var $boxMidle = document.getElementById("text_collection");
+        var $bar = document.getElementById("scrollBar");
+        var rate = $boxMidle.clientHeight/ $boxMidle.scrollHeight; //滚动条高度的比例,也是滚动条top位置的比例
+        var barHeight = rate * $boxMidle.clientHeight; //滚动条的 bar 的高度
+        if(rate < 1){
+            //需要出现滚动条,并计算滚动条的高度
+            $bar.style.height = barHeight + "px";
+        }else{
+            //不需要出现滚动条
+            $bar.style.display = "none";
+        }
+        $boxMidle.onscroll = function(e){
+            $bar.style.top = this.scrollTop*rate + "px";
+        }
+    </script>
+    <script>
+// <!--    ------------全局变量的定义------------------ -->
+        var btn = document.getElementById("btn");
+        var txt = document.getElementById("txt");
+        var text_collection = document.getElementsByTagName('div')[5];
+        var text_list = JSON.parse(window.sessionStorage.getItem("text_list"));
+        if(text_list == null)
+            text_list = ["欢迎使用华语热门音乐查询系统", "请问有什么需要帮助的吗"];
+        window.sessionStorage.setItem("text_list", JSON.stringify(text_list));
+
+        var length = "{{length}}"
+        var nodes = "{{nodes}}"
+        var root = "{{root}}"
+        var relation = "{{relation}}"
+        console.log(length)
+        if (length !== '')
+        {
+            nodes = nodes.replace(/\&quot;/g, '\"');
+            nodes = nodes.replace(/\&#39;/g, '\'');
+            nodes = nodes.replaceAll('\n', '');
+            // if (relation === '')
+            //     nodes.replace(/\"翻唱\"/, '')
+            console.log(nodes)
+            nodes = JSON.parse(nodes);
+            console.log(nodes)
+        }
+        if (root.length !== 0)
+        {
+            root = root.replace(/\&quot;/g, '\"');
+            root = root.replace(/\&#39;/g, '\'');
+            root = root.replaceAll('\n', '');
+            root = JSON.parse(root);
+            console.log(root);
+        }
+        if (relation.length !== 0)
+            relation = relation.replace(/\&quot;/g, '');
+        console.log(nodes)
+        console.log(root)
+
+        // if (length !== '0')
+        // {
+        //     for (let i = 0 ; i < parseInt(length) ; i ++)
+        //     {
+        //         s = "node"+i.toString()
+        //         node = "{{transit}}"
+        //         console.log(node)
+        //         node1 = node
+        //         consoles.log(node1)
+        //         node = node.replace(/\&quot;/g, '\"');
+        //         node = JSON.parse(node);
+        //         console.log(node)
+        //         answers.push(node)
+        //     }
+        // }
+        // console.log(answers)
+<!--    --------------点击提交回调------------------- -->
+        btn.onclick=function (){
+            var len = text_list.length;
+            text_list[len] = txt.value;
+            window.sessionStorage.setItem("text_list", JSON.stringify(text_list));
+            len = text_list.length;
+            console.log(text_list);
+            text_collection.innerHTML += '<char_text_right>'+txt.value+'</char_text_right></br>';
+            setTimeout("txt.value=''",2000);
+        };
+
+<!--    ---------------刷新回答---------------------------  -->
+        show = function(){
+            text_list = JSON.parse(window.sessionStorage.getItem("text_list"));
+            console.log(text_list)
+            var len = text_list.length;
+            var answer = ''
+            var type = ''
+            if (relation === "lyric")
+                type = 'lyric'
+            else
+                type = 'name'
+            if (parseInt(length) !== 0)
+            {
+                for(let i = 0 ; i < parseInt(length) ; i ++)
+                {
+                    answer = answer + nodes[i][type]
+                    if (i !== parseInt(length)-1)
+                        answer = answer + "、"
+                }
+            }
+            console.log(answer)
+            if (answer !== '')
+                text_list[len] = answer
+            len = text_list.length;
+            for (var i = 0 ; i < len ; i ++)
+            {
+                if (i === 0 || i === 1)
+                    continue;
+                if(i % 2 === 1)
+                {
+                    text_collection.innerHTML += '<chat_text_left>'+text_list[i.toString()]+'</chat_text_left></br>'
+                }
+                else
+                {
+                    text_collection.innerHTML += '<char_text_right>'+text_list[i.toString()]+'</char_text_right></br>';
+                }
+            }
+        }
+
+// <!--    ------------调用回答函数-----------------  -->
+        show();
+
+    </script>
+    <script type="text/javascript">
+      // this.$refs.totalChart,{width:'880px',height:'300px'}
+      // var myChart1 = echarts.init(this.$refs.totalChart,{width:'880px',height:'300px'});
+      var myChart1 = echarts.init(document.getElementById('myDraw'));
+      var categories = [];
+      if (relation === '合作')
+      {
+          categories[0] = {
+              name: '中心歌手'
+          };
+          categories[1] = {
+              name: '歌手'
+          };
+      }
+      else if (relation === '主创是')
+      {
+          categories[0] = {
+              name: '专辑'
+          };
+          categories[1] = {
+              name: '歌手'
+          };
+      }
+      else if (relation === '演唱')
+      {
+          categories[0] = {
+              name: '歌手'
+          };
+          categories[1] = {
+              name: '歌曲'
+          };
+      }
+      else if (relation === 'lyric')
+      {
+          categories[0] = {
+              name: '歌曲'
+          };
+      }
+      else if (relation === '收录于')
+      {
+          categories[0] = {
+              name: '歌曲'
+          };
+          categories[1] = {
+              name: '专辑'
+          };
+      }
+      else if (relation === '相似')
+      {
+          categories[0] = {
+              name: '中心专辑'
+          };
+          categories[1] = {
+              name: '专辑'
+          };
+      }
+      else if (relation === '属于')
+      {
+          categories[0] = {
+              name: '歌曲'
+          };
+          categories[1] = {
+              name: '歌单'
+          };
+      }
+      else if (relation === '')
+      {
+          categories[0] = {
+              name: '歌单'
+          };
+      }
+      option = {
+          // 图的标题
+          // title: {
+          //     text: 'ECharts 关系图'
+          // },
+          // 提示框的配置
+          tooltip: {
+              formatter: function (x) {
+                  // 语句换行
+                  var str = ''
+                  if (x.data.hasOwnProperty("intro"))
+                      str = x.data.intro
+                  else if(x.data.hasOwnProperty("lyric"))
+                      str = x.data.lyric
+                  // console.log(x)
+                  var strlen = 0
+                  if (x.data !== [])
+                  {
+                      console.log(x)
+                      var str1 = ''
+                      strlen = str.length
+                  }
+                  for (var i = 0; i < strlen; i++)
+                  {
+                      if (i % 30 == 0 && i != 0)
+                      {
+                          str1 += str.slice(i - 30, i) + "<br>"
+                      }
+                      if ((strlen-i) < 30)
+                      {
+                          str1 += str.slice(i, strlen)
+                          break
+                      }
+                  }
+                  console.log(str1)
+                  return str1;
+              }
+          },
+          // 工具箱
+          toolbox: {
+              // 显示工具箱
+              show: true,
+              feature: {
+                  mark: {
+                      show: true
+                  },
+                  // 还原
+                  restore: {
+                      show: true
+                  },
+                  // 保存为图片
+                  saveAsImage: {
+                      show: true
+                  }
+              }
+          },
+          legend: [{
+              // selectedMode: 'single',
+              data: categories.map(function (a) {
+                  return a.name;
+              })
+          }],
+          series: [{
+              type: 'graph', // 类型:关系图
+              layout: 'force', //图的布局，类型为力导图
+              symbolSize: 40, // 调整节点的大小
+              roam: true, // 是否开启鼠标缩放和平移漫游。默认不开启。如果只想要开启缩放或者平移,可以设置成 'scale' 或者 'move'。设置成 true 为都开启
+              edgeSymbol: ['circle', 'arrow'],
+              edgeSymbolSize: [2, 10],
+              force: {
+                  repulsion: 2500,
+                  edgeLength: [10, 50]
+              },
+              draggable: true,
+              lineStyle: {
+                  normal: {
+                      width: 2,
+                      color: '#4b565b',
+                  }
+              },
+              edgeLabel: {
+                  normal: {
+                      show: true,
+                      formatter: function (x) {
+                          console.log(x)
+                          return x.data.name;
+                      }
+                  }
+              },
+              label: {
+                  normal: {
+                      show: true,
+                      textStyle: {}
+                  }
+              },
+
+              // 数据
+              data: [],
+              links: [],
+              categories: categories,
+          }]
+      };
+      // 画节点
+      if (relation !== 'lyric' && relation !== '相似' && relation !== ''
+          && relation !== '演唱' && relation !== '收录于')
+      {
+        option.series[0].data.push({name: root["name"], intro: root["introduction"], symbolSize: 70, category: 0})
+        for (let i = 0 ; i < parseInt(length); i ++)
+        {
+          option.series[0].data.push({name: nodes[i]["name"], intro: nodes[i]["introduction"], symbolSize: 50,category: 1})
+        }
+      }
+      else if(relation === 'lyric')
+          option.series[0].data.push({name: root["name"], lyric: root["lyric"], symbolSize: 70, category: 0})
+      else if (relation === '相似' || relation === '')
+      {
+          if (relation !== '')
+          {
+            option.series[0].data.push({name: root["name"], symbolSize: 70, category: 0})
+            for (let i = 0 ; i < parseInt(length); i ++)
+            {
+                if (nodes[i]["name"] !== root["name"])
+                    option.series[0].data.push({name: nodes[i]["name"], symbolSize: 50,category: 1})
+            }
+          }
+          else
+          {
+            for (let i = 0 ; i < parseInt(length); i ++)
+            {
+                if (nodes[i]["name"] !== root["name"])
+                    option.series[0].data.push({name: nodes[i]["name"], symbolSize: 50,category: 0})
+            }
+          }
+      }
+      else if(relation === '演唱')
+      {
+        option.series[0].data.push({name: root["name"], lyric: root["lyric"], symbolSize: 70, category: 0})
+        for (let i = 0 ; i < parseInt(length); i ++)
+        {
+          option.series[0].data.push({name: nodes[i]["name"], lyric: nodes[i]["lyric"], symbolSize: 50,category: 1})
+        }
+      }
+      else
+      {
+        option.series[0].data.push({name: root["name"], lyric: root["lyric"], symbolSize: 70, category: 0})
+        for (let i = 0 ; i < parseInt(length); i ++)
+        {
+          option.series[0].data.push({name: nodes[i]["name"], symbolSize: 50,category: 1})
+        }
+      }
+      console.log(option.series[0].data)
+
+      // 画关系
+      if (relation !== "lyric")
+      {
+          for (let i = 0 ; i < parseInt(length); i ++)
+          {
+              option.series[0].links.push({source:root["name"], target: nodes[i]["name"], name: relation})
+          }
+          console.log(option.series[0].links)
+      }
+      myChart1.setOption(option);
+    </script>
+</body>
+</html>
