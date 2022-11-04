@@ -2,7 +2,7 @@
 ## 上海大学语义网络与知识图谱课程项目（已施工完毕）
 ### 相关依赖（pip安装即可）
 &emsp;&emsp;Django==2.1<br>
-&emsp;&emsp;py2neo
+&emsp;&emsp;py2neo==4.3.0
 ### 使用说明
 &emsp;&emsp;首先需要配置neo4j并建库，查阅相关教程即可，通过形如本项目文件match.py中的<br>
 graph = Graph('http://localhost:7474', username='你的用户名', password='你的密码')<br>
